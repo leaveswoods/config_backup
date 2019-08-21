@@ -1,0 +1,11 @@
+[alias]
+	co = checkout
+	s = status
+[user]
+	email = leaves.woods92@gmail.com
+	name = leaveswoods
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true

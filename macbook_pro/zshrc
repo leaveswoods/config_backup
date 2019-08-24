@@ -72,10 +72,46 @@ plugins=(gitfast last-working-dir common-aliases sublime zsh-syntax-highlighting
 
 source $ZSH/oh-my-zsh.sh
 export PATH="$HOME/mongodb/mongodb-osx-x86_64-4.0.10/bin:${PATH}";
+export PATH="$HOME/node-v12.5.0-darwin-x64/bin:${PATH}";
 function run() {
 	if [ "$1" = "e" ]; docker exec -it "$2" sh
 
 }
+
+# function printArray(array) {
+# 	for i in $array
+# 	do
+# 		echo $i
+# 	done
+# }
+
+function dl() {
+	f=($(aws lambda list-functions | python -c "import sys, json; functions=json.load(sys.stdin)['Functions']; function_names=list(map(lambda x: x['FunctionName'].encode('utf-8') + '.' + x['Runtime'].encode('utf-8'), functions)); print(' '.join(function_names))"))
+	PS3="Select an function to download "
+	select opt in "${f[@]}"
+	do
+		echo "Downloading lambda function $opt"
+		URL=$(aws lambda get-function --function-name $(cut -d'.' -f1 <<<"$opt") --query 'Code.Location' | sed 's/"//g')
+		wget -O ./function.zip $URL
+		exit
+	done
+}
+
+# function dl() {
+# 	if [ "$1" = "lambda" ]; then
+# 		URL=$(aws lambda get-function --function-name "$2" --query 'Code.Location' | sed 's/"//g')
+# 		wget -O ./function.zip $URL
+# 		unzip -j "function.zip" "lambda_function.*" -d "./"
+# 	fi
+# }
+
+
+# function upload() {
+# 	if [ "$1" = "lambda" ]; then
+# 		unzip -j "function.zip" "lambda_function.*" -d "./function"
+# 	fi
+# }
+
 # User configuration
 
 # export MANPATH="/usr/local/man:$MANPATH"
@@ -103,5 +139,20 @@ function run() {
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 alias dcd="docker-compose down"
 
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$('/Users/linmingye/miniconda3/bin/conda' 'shell.zsh' 'hook' 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    eval "$__conda_setup"
+else
+    if [ -f "/Users/linmingye/miniconda3/etc/profile.d/conda.sh" ]; then
+        . "/Users/linmingye/miniconda3/etc/profile.d/conda.sh"
+    else
+        export PATH="/Users/linmingye/miniconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda initialize <<<
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+

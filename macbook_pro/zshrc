@@ -91,26 +91,63 @@ function dl() {
 	select opt in "${f[@]}"
 	do
 		echo "Downloading lambda function $opt"
-		URL=$(aws lambda get-function --function-name $(cut -d'.' -f1 <<<"$opt") --query 'Code.Location' | sed 's/"//g')
+		function_name=$(cut -d'.' -f1 <<<"$opt")
+
+		URL=$(aws lambda get-function --function-name "$function_name" --query 'Code.Location' | sed 's/"//g')
 		wget -O ./function.zip $URL
-		exit
+		unzip "function.zip" -d "./"
+
+		rt="$(cut -d'.' -f2 <<<"$opt")"
+		if [[ "$rt" =~ "python" ]]; then
+			mv "./function/*.py" ./
+			mkdir ./package
+			cp -rf ./function/* ./package
+			rm -rf ./function
+			echo "Please add dependencies, sperate by space"
+			read dependencies
+			pip install --target ./package $(echo "$dependencies")
+			echo "Dependencies updated, do you want to upload?"
+			read yn
+		    case $yn in
+		        [Yy]* ) upload "$function_name" "$rt"; break;;
+		        [Nn]* ) exit;;
+		        * ) echo "Please answer yes or no.";;
+		    esac
+		elif [[ "$rt" =~ "nodejs" ]]; then
+			cp -rf ./function/* ./
+			rm -rf ./function
+			echo "Please add dependencies, sperate by space"
+			read dependencies
+			npm install $(echo "$dependencies")
+			echo "Dependencies updated, do you want to upload?"
+			read yn
+		    case $yn in
+		        [Yy]* ) upload "$function_name" "$rt"; break;;
+		        [Nn]* ) exit;;
+		        * ) echo "Please answer yes or no.";;
+		    esac
+		else
+			echo "Can only handle python and nodejs runtime for now, your runtime is $rt"
+			exit
+		fi
 	done
+	rm -rf ./*
+	exit
 }
 
-# function dl() {
-# 	if [ "$1" = "lambda" ]; then
-# 		URL=$(aws lambda get-function --function-name "$2" --query 'Code.Location' | sed 's/"//g')
-# 		wget -O ./function.zip $URL
-# 		unzip -j "function.zip" "lambda_function.*" -d "./"
-# 	fi
-# }
-
-
-# function upload() {
-# 	if [ "$1" = "lambda" ]; then
-# 		unzip -j "function.zip" "lambda_function.*" -d "./function"
-# 	fi
-# }
+function upload() {
+	function_name=$1
+	rt=$2
+	if [[ "$rt" =~ "python" ]]; then
+		cd package
+		zip -r9 ../function.zip .
+		cd ..
+		zip -g function.zip *.py
+	elif [[ "$rt" =~ "nodejs" ]]; then
+		zip -r9 ./function.zip .
+	fi
+	aws lambda update-function-code --function-name "$function_name"  --zip-file fileb://function.zip
+}
 
 # User configuration
 
